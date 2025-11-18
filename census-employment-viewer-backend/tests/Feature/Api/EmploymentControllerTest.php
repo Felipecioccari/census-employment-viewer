@@ -67,7 +67,6 @@ class EmploymentControllerTest extends TestCase
         ]);
 
         $response = $this->getJson('/api/employments?quarter=2023-Q4&states=06&breakdownSex=1');
-        $response->dump();
 
         $response->assertOk()
             ->assertJson([
