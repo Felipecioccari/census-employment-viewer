@@ -26,21 +26,54 @@ class CensusEmploymentService
         $nameByCode = collect($statesConfig)->pluck('name', 'code');
 
         $rows = [];
+        $errors = [];
 
         foreach ($stateCodes as $code) {
             if ($breakdownSex) {
-                $male = $this->fetchEmp($code, $quarter, '1');
-                $female = $this->fetchEmp($code, $quarter, '2');
-
-                $rows[] = [
+                $row = [
                     'stateCode' => $code,
                     'stateName' => $nameByCode[$code] ?? $code,
-                    'male' => $male,
-                    'female' => $female,
-                    'total' => $male + $female,
+                    'male' => null,
+                    'female' => null,
                 ];
+                $hasValue = false;
+
+                foreach (['male' => '1', 'female' => '2'] as $label => $sexCode) {
+                    try {
+                        $value = $this->fetchEmp($code, $quarter, $sexCode);
+                        $row[$label] = $value;
+                        $hasValue = true;
+                    } catch (\Throwable $e) {
+                        $error = [
+                            'stateCode' => $code,
+                            'sex' => $label,
+                            'message' => $e->getMessage(),
+                        ];
+                        $errors[] = $error;
+
+                        $this->logger->warning('employment.summary.fetch_partial_failure', $context + $error);
+                    }
+                }
+
+                if ($hasValue) {
+                    $row['total'] = (int) (($row['male'] ?? 0) + ($row['female'] ?? 0));
+                    $rows[] = $row;
+                }
             } else {
-                $total = $this->fetchEmp($code, $quarter, '0');
+                try {
+                    // sex -> 0 means total
+                    $total = $this->fetchEmp($code, $quarter, '0');
+                } catch (\Throwable $e) {
+                    $error = [
+                        'stateCode' => $code,
+                        'message' => $e->getMessage(),
+                    ];
+                    $errors[] = $error;
+
+                    $this->logger->warning('employment.summary.fetch_partial_failure', $context + $error);
+
+                    continue;
+                }
 
                 $rows[] = [
                     'stateCode' => $code,
@@ -52,9 +85,23 @@ class CensusEmploymentService
 
         usort($rows, fn ($a, $b) => strcmp($a['stateName'], $b['stateName']));
 
-        $this->logger->info('employment.summary.fetch_succeeded', $context);
+        $hasData = ! empty($rows);
+        $logPayload = $context + [
+            'error_count' => count($errors),
+            'has_errors' => ! empty($errors),
+            'has_data' => $hasData,
+        ];
 
-        return $rows;
+        if ($hasData) {
+            $this->logger->info('employment.summary.fetch_succeeded', $logPayload);
+        } else {
+            $this->logger->error('employment.summary.fetch_failed_all', $logPayload);
+        }
+
+        return [
+            'rows' => $rows,
+            'errors' => $errors,
+        ];
     }
 
     private function fetchEmp(string $stateCode, string $quarter, string $sex): int

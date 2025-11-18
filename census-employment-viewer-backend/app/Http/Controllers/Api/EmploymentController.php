@@ -52,14 +52,36 @@ class EmploymentController extends Controller
         try {
             $summary = $this->censusEmploymentService->getEmploymentSummary($stateCodes, $quarter, $breakdownSex);
             $durationMs = (int) ((microtime(true) - $startedAt) * 1000);
-
-            \Log::info('employment.index.succeeded', [
+            $errorCount = count($summary['errors']);
+            $logContext = [
                 'request_id' => $requestId,
                 'state_count' => count($stateCodes),
                 'duration_ms' => $durationMs,
-            ]);
+                'error_count' => $errorCount,
+            ];
 
-            return response()->json(['data' => $summary]);
+            if (empty($summary['rows']) && $errorCount > 0) {
+                \Log::error('employment.index.failed_all_states', $logContext);
+
+                return response()->json([
+                    'data' => [],
+                    'errors' => $summary['errors'],
+                    'hasErrors' => true,
+                    'message' => 'Failed to retrieve employment data for requested states',
+                ], 502);
+            }
+
+            if ($errorCount > 0) {
+                \Log::warning('employment.index.completed_with_errors', $logContext);
+            } else {
+                \Log::info('employment.index.succeeded', $logContext);
+            }
+
+            return response()->json([
+                'data' => $summary['rows'],
+                'errors' => $summary['errors'],
+                'hasErrors' => $errorCount > 0,
+            ]);
         } catch (\Throwable $e) {
             $durationMs = (int) ((microtime(true) - $startedAt) * 1000);
 

@@ -37,13 +37,90 @@ class EmploymentControllerTest extends TestCase
             ['stateCode' => '12', 'stateName' => 'Florida', 'male' => 5, 'female' => 8, 'total' => 13],
         ];
 
-        $this->fakeSummary(['06', '12'], '2023-Q4', true, $summary);
+        $this->fakeSummary(['06', '12'], '2023-Q4', true, [
+            'rows' => $summary,
+            'errors' => [],
+        ]);
 
         $response = $this->getJson('/api/employments?quarter=2023-Q4&states=12,06&breakdownSex=1');
-        $response->dump();
-        $response->dumpHeaders();
-        $response->dumpSession();
 
-        $response->assertOk()->assertJson(['data' => $summary]);
+        $response->assertOk()->assertJson([
+            'data' => $summary,
+            'errors' => [],
+            'hasErrors' => false,
+        ]);
+    }
+
+    public function test_returns_partial_rows_when_one_sex_fails(): void
+    {
+        $rows = [
+            ['stateCode' => '06', 'stateName' => 'California', 'male' => 10,
+                'female' => null, 'total' => 10],
+        ];
+        $errors = [
+            ['stateCode' => '06', 'sex' => 'female', 'message' => 'boom'],
+        ];
+
+        $this->fakeSummary(['06'], '2023-Q4', true, [
+            'rows' => $rows,
+            'errors' => $errors,
+        ]);
+
+        $response = $this->getJson('/api/employments?quarter=2023-Q4&states=06&breakdownSex=1');
+        $response->dump();
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => $rows,
+                'errors' => $errors,
+                'hasErrors' => true,
+            ]);
+    }
+
+    public function test_returns_partial_response_when_service_reports_errors(): void
+    {
+        $rows = [
+            ['stateCode' => '06', 'stateName' => 'California', 'total' => 99],
+        ];
+        $errors = [
+            ['stateCode' => '12', 'message' => 'boom'],
+        ];
+
+        $this->fakeSummary(['06', '12'], '2023-Q4', false, [
+            'rows' => $rows,
+            'errors' => $errors,
+        ]);
+
+        $response = $this->getJson('/api/employments?quarter=2023-Q4&states=12,06');
+
+        $response->assertOk()->assertJson([
+            'data' => $rows,
+            'errors' => $errors,
+            'hasErrors' => true,
+        ]);
+    }
+
+    public function test_returns_error_status_when_all_requests_fail(): void
+    {
+        $errors = [
+            ['stateCode' => '06', 'message' => 'boom'],
+            ['stateCode' => '12', 'message' => 'boom2'],
+        ];
+
+        $this->fakeSummary(['06', '12'], '2023-Q4', false, [
+            'rows' => [],
+            'errors' => $errors,
+        ]);
+
+        $response = $this->getJson('/api/employments?quarter=2023-Q4&states=12,06');
+
+        $response
+            ->assertStatus(502)
+            ->assertJson([
+                'data' => [],
+                'errors' => $errors,
+                'hasErrors' => true,
+                'message' => 'Failed to retrieve employment data for requested states',
+            ]);
     }
 }
