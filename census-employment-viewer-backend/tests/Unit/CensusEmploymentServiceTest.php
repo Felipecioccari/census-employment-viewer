@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\CensusEmploymentService;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
@@ -26,9 +27,15 @@ class CensusEmploymentServiceTest extends TestCase
             ['code' => '02', 'name' => 'Beta'],
         ]);
 
-        Http::fakeSequence()
-            ->push([['Emp'], [2000]], 200)
-            ->push([], 500);
+        Http::fake(function (Request $request) {
+            parse_str(parse_url($request->url(), PHP_URL_QUERY) ?: '', $query);
+
+            if (($query['for'] ?? null) === 'state:02') {
+                return Http::response([['Emp'], [2000]], 200);
+            }
+
+            return Http::response([], 500);
+        });
 
         $service = new CensusEmploymentService($this->makeLogger(), 'https://example.test');
 
@@ -57,9 +64,15 @@ class CensusEmploymentServiceTest extends TestCase
             ['code' => '01', 'name' => 'Alpha'],
         ]);
 
-        Http::fakeSequence()
-            ->push([['Emp'], [300]], 200)
-            ->push([], 500);
+        Http::fake(function (Request $request) {
+            parse_str(parse_url($request->url(), PHP_URL_QUERY) ?: '', $query);
+
+            if (($query['sex'] ?? null) === '1') {
+                return Http::response([['Emp'], [300]], 200);
+            }
+
+            return Http::response([], 500);
+        });
 
         $service = new CensusEmploymentService($this->makeLogger(), 'https://example.test');
 
