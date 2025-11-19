@@ -10,6 +10,7 @@ class StateController extends Controller
     public function index(): JsonResponse
     {
         $states = config('states');
+
         return response()->json(['data' => $states]);
     }
 }

@@ -34,5 +34,8 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'census_qwi' => [
+        'base_url' => env('CENSUS_QWI_BASE_URL', 'https://api.census.gov/data/timeseries/qwi/sa'),
+    ],
 
 ];
