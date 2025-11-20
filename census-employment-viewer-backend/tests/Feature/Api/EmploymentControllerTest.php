@@ -30,6 +30,30 @@ class EmploymentControllerTest extends TestCase
         $this->app->instance(CensusEmploymentService::class, $mock);
     }
 
+    public function test_returns_422_when_quarter_is_missing(): void
+    {
+        $response = $this->getJson('/api/employments');
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'message' => 'Validation failed',
+            ])
+            ->assertJsonPath('errors.quarter.0', 'The quarter field is required.');
+    }
+
+    public function test_returns_422_when_quarter_is_in_the_future(): void
+    {
+        $futureQuarter = (date('Y') + 1).'-Q1';
+
+        $response = $this->getJson('/api/employments?quarter='.$futureQuarter);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'message' => 'Validation failed',
+            ])
+            ->assertJsonPath('errors.quarter.0', 'The quarter cannot be in the future.');
+    }
+
     public function test_returns_summary_for_requested_states_with_sex_breakdown(): void
     {
         $summary = [
