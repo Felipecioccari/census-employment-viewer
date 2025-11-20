@@ -32,6 +32,14 @@ Start the development server with HMR:
 npm run dev
 ```
 
+### API base URL
+
+Set the backend URL with a Vite env var (see `.env.local`):
+
+```bash
+VITE_QWI_BASE_URL_API=http://127.0.0.1:8000
+```
+
 Your application will be available at `http://localhost:5173`.
 
 ## Building for Production
