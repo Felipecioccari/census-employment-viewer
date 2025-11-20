@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Validations\NotFutureQuarter;
 use App\Services\CensusEmploymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,11 +29,25 @@ class EmploymentController extends Controller
             'breakdown_sex' => $request->input('breakdownSex'),
         ]);
 
-        $validated = $request->validate([
-            'quarter' => 'required|string',
+        $validator = \Validator::make($request->all(), [
+            'quarter' => ['required', 'string', new NotFutureQuarter()],
             'states' => 'nullable|string',
             'breakdownSex' => 'nullable',
         ]);
+
+        if ($validator->fails()) {
+            \Log::warning('employment.index.validation_failed', [
+                'request_id' => $requestId,
+                'errors' => $validator->errors()->all(),
+            ]);
+
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
 
         $quarter = $validated['quarter'];
         $breakdownSex = filter_var($validated['breakdownSex'] ?? false, FILTER_VALIDATE_BOOLEAN);
