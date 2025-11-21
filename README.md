@@ -15,24 +15,35 @@ React front end + Laravel API that visualize U.S. employment counts by state and
 - Frontend (Vite/React Router, port 5173):
   ```bash
   cd census-employment-viewer-frontend
-  cp .env.example .env.local 2>/dev/null || true
-  # Minimum env variables
-  cat > .env.local <<'EOF'
-  VITE_QWI_BASE_URL_API=http://127.0.0.1:8000
-  VITE_FIRST_YEAR_QUARTERS=2020
-  VITE_LAST_YEAR_QUARTERS=2023
-  EOF
-
   npm install
   npm run dev -- --host --port=5173
   ```
-- Open the UI at `http://localhost:5173`. The front end calls the API at `http://127.0.0.1:8000/api`.
+- Open the UI at `http://localhost:5173`. The front end calls the API at `http://localhost:8000/api`.
 
 ### Docker option
 
-From the repo root you can also run both services together:
+From the repo root you can also run both services together. You still need to complete the backend setup above (copy `.env`, install Composer dependencies) because the `docker-compose.yml` uses Sail:
+
+- If you want to install PHP and Composer locally, follow the official docs: https://laravel.com/docs/12.x/installation
+- If you prefer not to install PHP and Composer locally, run:
 ```bash
-docker-compose up --build
+cd census-employment-viewer-backend
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php82-composer:latest \
+    composer install --ignore-platform-reqs
+```
+
+Then from the repo root:
+```bash
+docker compose up --build
+```
+
+After the initial build you can use:
+```bash
+docker compose up
 ```
 This binds the API to `http://localhost:80` and the front end to `http://localhost:5173`.
 
