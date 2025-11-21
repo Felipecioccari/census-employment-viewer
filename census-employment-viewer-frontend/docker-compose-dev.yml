@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  app:
+    container_name: census-employment-viewer-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      PORT: 5173
+      VITE_QWI_BASE_URL_API: http://127.0.0.1:80
+      VITE_FIRST_YEAR_QUARTERS: "2020"
+      VITE_LAST_YEAR_QUARTERS: "2023"
+    ports:
+      - "5173:5173"
+    restart: unless-stopped

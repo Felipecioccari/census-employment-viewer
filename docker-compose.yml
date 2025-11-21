@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./census-employment-viewer-backend/vendor/laravel/sail/runtimes/8.4
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: "${WWWGROUP:-1000}"
+    image: census-employment-viewer-backend-integrate
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${APP_PORT:-80}:80"
+      - "${VITE_PORT:-3000}:${VITE_PORT:-3000}"
+    environment:
+      WWWUSER: "${WWWUSER:-1000}"
+      LARAVEL_SAIL: 1
+      XDEBUG_MODE: "${SAIL_XDEBUG_MODE:-off}"
+      XDEBUG_CONFIG: "${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}"
+      IGNITION_LOCAL_SITES_PATH: "${PWD:-/var/www/html}"
+    volumes:
+      - ./census-employment-viewer-backend:/var/www/html
+    networks:
+      - app
+
+  frontend:
+    build:
+      context: ./census-employment-viewer-frontend
+      dockerfile: Dockerfile.dev
+    container_name: census-employment-viewer-frontend-integrate
+    environment:
+      NODE_ENV: development
+      PORT: 5173
+      VITE_QWI_BASE_URL_API: http://0.0.0.0:80
+      VITE_FIRST_YEAR_QUARTERS: "2020"
+      VITE_LAST_YEAR_QUARTERS: "2023"
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+    volumes:
+      - ./census-employment-viewer-frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
