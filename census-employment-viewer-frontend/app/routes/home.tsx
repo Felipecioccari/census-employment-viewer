@@ -380,12 +380,13 @@ export default function Home() {
               <p className="font-semibold">Some requests returned errors</p>
               <ul className="mt-2 space-y-1 text-sm">
                 {partialErrors.map((error, index) => (
-                  <li key={`${error.stateCode ?? "unknown"}-${index}`}>
-                    {error.stateCode ? `State ${error.stateCode}: ` : ""}
-                    {error.sex ? `${error.sex} ` : ""}
-                    {error.message ?? "Unexpected error"}
-                  </li>
-                ))}
+                    <li key={`${error.stateCode ?? "unknown"}-${index}`}>
+                      <li>{error.stateCode ? `State Code: ${error.stateCode} ` : ""}</li>
+                      <li>{`State Name: ${stateNameByCode.get(error.stateCode ?? "") ?? error.stateCode ?? ""}`}</li>
+                      <li>{`Sex: ${error.sex ? `${error.sex} ` : ""}`}</li>
+                      <li>{"Network Error"}</li>
+                    </li>
+                  ))}
               </ul>
             </div>
           )}
